@@ -1,0 +1,76 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: issuance-service
+  labels:
+    app: issuance-service
+    tier: backend
+spec:
+  replicas: 3
+  selector:
+    matchLabels:
+      app: issuance-service
+  template:
+    metadata:
+      labels:
+        app: issuance-service
+        tier: backend
+    spec:
+      containers:
+      - name: issuance-service
+        image: kube-credential-issuance:latest
+        imagePullPolicy: IfNotPresent
+        ports:
+        - containerPort: 3001
+          name: http
+        env:
+        - name: PORT
+          value: "3001"
+        - name: WORKER_ID
+          valueFrom:
+            fieldRef:
+              fieldPath: metadata.name
+        resources:
+          requests:
+            memory: "128Mi"
+            cpu: "100m"
+          limits:
+            memory: "256Mi"
+            cpu: "200m"
+        livenessProbe:
+          httpGet:
+            path: /health
+            port: 3001
+          initialDelaySeconds: 10
+          periodSeconds: 10
+        readinessProbe:
+          httpGet:
+            path: /health
+            port: 3001
+          initialDelaySeconds: 5
+          periodSeconds: 5
+        volumeMounts:
+        - name: data
+          mountPath: /app/data
+      volumes:
+      - name: data
+        emptyDir: {}
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: issuance-service
+  labels:
+    app: issuance-service
+spec:
+  type: ClusterIP
+  selector:
+    app: issuance-service
+  ports:
+  - port: 3001
+    targetPort: 3001
+    protocol: TCP
+    name: http
+
+
+
